@@ -459,6 +459,20 @@ FRAGMENT;
         return $this;
     }
 
+    public function scrollTo(int $x, int $y)
+    {
+        $fragment = <<<FRAGMENT
+casper.then(function() {
+    this.scrollTo($x, $y);
+});
+
+FRAGMENT;
+
+        $this->script .= $fragment;
+
+        return $this;
+    }
+
     /**
      * take a screenshot of the whole page
      * area defined by viewport width
