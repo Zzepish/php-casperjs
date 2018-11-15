@@ -1,6 +1,5 @@
 <?php
 namespace Browser;
-
 /**
  * CasperJS wrapper
  *
@@ -16,7 +15,6 @@ class Casper
     private $TAG_CURRENT_STATUS = '[CURRENT_STATUS]';
     private $TAG_CURRENT_STATUS_TEXT = '[CURRENT_STATUS_TEXT]';
     private $TAG_CURRENT_COOKIES = '[CURRENT_COOKIES]';
-
     private $debug = false;
     private $options = array();
     private $script = '';
@@ -35,7 +33,14 @@ class Casper
     private $status;
     private $statusText = '';
     private $cookies = [];
-
+    private $proxy = [
+        'host' => false,
+        'port' => false,
+        'type' => 'manual',
+        'user' => false,
+        'pass' => false
+    ];
+    private $proxyIsSet = false;
     public function __construct($path2casper = null, $tempDir = null)
     {
         if ($path2casper) {
@@ -103,7 +108,23 @@ casper.page.customHeaders = {
     {
         $this->userAgent = $userAgent;
     }
-
+    /**
+     * Add proxy usage
+     *
+     * @param        $host
+     * @param        $port
+     * @param string $type
+     * @param string $user
+     * @param string $pass
+     */
+    public function setProxy($host, $port, $type = 'manual', $user = '', $pass = '') {
+        $this->proxyIsSet    = true;
+        $this->proxy['host'] = $host;
+        $this->proxy['port'] = $port;
+        $this->proxy['type'] = $type;
+        $this->proxy['user'] = $user;
+        $this->proxy['pass'] = $pass;
+    }
     /**
      * enable debug logging into syslog
      *
@@ -184,7 +205,19 @@ FRAGMENT;
         $this->requestedUrls = array();
         $this->currentUrl = '';
     }
+    public function scrollTo(int $x, int $y)
+    {
+        $fragment = <<<FRAGMENT
+casper.then(function() {
+    this.scrollTo($x, $y);
+});
 
+FRAGMENT;
+
+        $this->script .= $fragment;
+
+        return $this;
+    }
     /**
      * open the specified url
      *
@@ -203,12 +236,19 @@ var casper = require('casper').create({
     logLevel: 'debug',
     colorizerType: 'Dummy'
 });
-
 casper.userAgent('$this->userAgent');
+FRAGMENT;
+        if($this->proxyIsSet){
+            $fragment .= <<<FRAGMENT
+phantom.setProxy('{$this->proxy['host']}','{$this->proxy['port']}','{$this->proxy['type']}','{$this->proxy['user']}','{$this->proxy['pass']}');
+FRAGMENT;
+        }
+        $fragment .= <<<FRAGMENT
 casper.start().then(function() {
     this.open('$url', {
         headers: {
-            'Accept': 'text/html'
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
+            'AcceptEncoding':'gzip, deflate, br'
         }
     });
 });
@@ -328,14 +368,10 @@ casper.waitForText(
     },
     $timeout
 );
-
 FRAGMENT;
-
         $this->script .= $fragment;
-
         return $this;
     }
-
     /**
      * @param int $timeout
      * @return $this
@@ -349,14 +385,10 @@ casper.wait(
         this.echo('timeout occured');
     }
 );
-
 FRAGMENT;
-
         $this->script .= $fragment;
-
         return $this;
     }
-
     /**
      * @param $selector
      * @param int $timeout
@@ -375,14 +407,10 @@ casper.waitForSelector(
     },
     $timeout
 );
-
 FRAGMENT;
-
         $this->script .= $fragment;
-
         return $this;
     }
-
     /**
      * @param $selector
      * @return $this
@@ -393,14 +421,10 @@ FRAGMENT;
 casper.then(function() {
     this.click('$selector');
 });
-
 FRAGMENT;
-
         $this->script .= $fragment;
-
         return $this;
     }
-
     /**
      * take a screenshot of the page
      * area containing the selector
@@ -416,15 +440,10 @@ FRAGMENT;
 casper.then(function() {
     this.captureSelector('$filename', '$selector');
 });
-
 FRAGMENT;
-
         $this->script .= $fragment;
-
         return $this;
     }
-
-
     /**
      * take a screenshot of the page
      * area defined by
@@ -441,7 +460,6 @@ FRAGMENT;
         $left = $area['left'];
         $width = $area['width'];
         $height = $area['height'];
-
         $fragment = <<<FRAGMENT
 casper.then(function() {
     this.capture('$filename', {
@@ -451,28 +469,10 @@ casper.then(function() {
         height: $height
     });
 });
-
 FRAGMENT;
-
         $this->script .= $fragment;
-
         return $this;
     }
-
-    public function scrollTo(int $x, int $y)
-    {
-        $fragment = <<<FRAGMENT
-casper.then(function() {
-    this.scrollTo($x, $y);
-});
-
-FRAGMENT;
-
-        $this->script .= $fragment;
-
-        return $this;
-    }
-
     /**
      * take a screenshot of the whole page
      * area defined by viewport width
@@ -484,7 +484,6 @@ FRAGMENT;
      */
     public function capturePage($filename)
     {
-
         $fragment = <<<FRAGMENT
 casper.on('load.finished', function() {
     this.capture('$filename', {
@@ -497,12 +496,9 @@ casper.on('load.finished', function() {
     });
 });
 FRAGMENT;
-
         $this->script .= $fragment;
-
         return $this;
     }
-
     /**
      * switch to the child frame number $id
      *
@@ -516,14 +512,10 @@ FRAGMENT;
 casper.then(function() {
     this.page.switchToChildFrame($id);
 });
-
 FRAGMENT;
-
         $this->script .= $fragment;
-
         return $this;
     }
-
     /**
      * get back to parent frame
      *
@@ -535,11 +527,8 @@ FRAGMENT;
 casper.then(function() {
     this.page.switchToParentFrame();
 });
-
 FRAGMENT;
-
         $this->script .= $fragment;
-
         return $this;
     }
 
@@ -569,14 +558,10 @@ casper.then(function() {
         $function
     });
 });
-
 FRAGMENT;
-
         $this->script .= $fragment;
-
         return $this;
     }
-
     /**
      * @param $js
      * @return $this
@@ -586,12 +571,9 @@ FRAGMENT;
         $fragment = <<<FRAGMENT
 $js
 FRAGMENT;
-
         $this->script .= $fragment;
-
         return $this;
     }
-
     /**
      * run the casperJS script and return the stdOut
      * in using the output variable
@@ -602,7 +584,6 @@ FRAGMENT;
     public function run()
     {
         $output = array();
-
         $fragment = <<<FRAGMENT
 casper.then(function () {
     this.echo('$this->TAG_CURRENT_URL' + this.getCurrentUrl());
@@ -614,35 +595,25 @@ casper.then(function () {
     this.echo('$this->TAG_CURRENT_STATUS_TEXT' + this.currentResponse.statusText);
     this.echo('$this->TAG_CURRENT_COOKIES' + JSON.stringify(phantom.cookies));
 });
-
 casper.run();
-
 FRAGMENT;
-
         $this->script .= $fragment;
         $filename = tempnam($this->tempDir, 'php-casperjs-');
-
         file_put_contents($filename, $this->script);
-
         // options parsing
         $options = '';
         foreach ($this->options as $option => $value) {
             $options .= ' --' . $option . '=' . $value;
         }
-
         exec($this->path2casper . 'casperjs ' . $filename . $options, $output);
         if (empty($output)) {
             throw new \Exception('Can not find CasperJS.');
         }
-
         $this->setOutput($output);
         $this->processOutput();
-
         unlink($filename);
-
         return $output;
     }
-
     /**
      * process the output after navigation
      * and fill the differents attributes for
@@ -658,20 +629,18 @@ FRAGMENT;
                     $outputLine
                 );
             }
-
             if (strpos($outputLine, "Navigation requested: url=") !== false) {
                 $frag0 = explode('Navigation requested: url=', $outputLine);
                 $frag1 = explode(', type=', $frag0[1]);
                 $this->requestedUrls[] = $frag1[0];
             }
-
             if ($this->isDebug()) {
                 syslog(LOG_INFO, '[PHP-CASPERJS] ' . $outputLine);
             }
             if (strpos(
-                $outputLine,
-                $this->TAG_CURRENT_PAGE_CONTENT
-            ) !== false
+                    $outputLine,
+                    $this->TAG_CURRENT_PAGE_CONTENT
+                ) !== false
             ) {
                 $this->currentPageContent = str_replace(
                     $this->TAG_CURRENT_PAGE_CONTENT,
@@ -679,7 +648,6 @@ FRAGMENT;
                     $outputLine
                 );
             }
-
             if (strpos($outputLine, $this->TAG_CURRENT_HTML) !== false) {
                 $this->currentHtml = str_replace(
                     $this->TAG_CURRENT_HTML,
@@ -687,55 +655,44 @@ FRAGMENT;
                     $outputLine
                 );
             }
-
             if (strpos($outputLine, " steps in ") !== false) {
                 $frag = explode(' steps in ', $outputLine);
                 $this->loadTime = $frag[1];
             }
-
             if (0 === strpos($outputLine, $this->TAG_CURRENT_HEADERS)) {
                 $this->headers = json_decode(str_replace($this->TAG_CURRENT_HEADERS, '', $outputLine), true);
             }
-
             if (0 === strpos($outputLine, $this->TAG_CURRENT_STATUS)) {
                 $this->status = (int) str_replace($this->TAG_CURRENT_STATUS, '', $outputLine);
             }
-
             if (0 === strpos($outputLine, $this->TAG_CURRENT_STATUS_TEXT)) {
                 $this->statusText = trim(str_replace($this->TAG_CURRENT_STATUS_TEXT, '', $outputLine));
             }
-
             if (0 === strpos($outputLine, $this->TAG_CURRENT_COOKIES)) {
                 $this->cookies = json_decode(str_replace($this->TAG_CURRENT_COOKIES, '', $outputLine), true);
             }
         }
     }
-
     public function getCurrentUrl()
     {
         return $this->currentUrl;
     }
-
     public function getRequestedUrls()
     {
         return $this->requestedUrls;
     }
-
     public function getCurrentPageContent()
     {
         return $this->currentPageContent;
     }
-
     public function getHTML()
     {
         return $this->currentHtml;
     }
-
     public function getLoadTime()
     {
         return $this->loadTime;
     }
-
     /**
      * @return array
      */
@@ -743,7 +700,6 @@ FRAGMENT;
     {
         return $this->headers;
     }
-
     /**
      * @return int
      */
@@ -751,7 +707,6 @@ FRAGMENT;
     {
         return $this->status;
     }
-
     /**
      * @return string
      */
@@ -759,7 +714,6 @@ FRAGMENT;
     {
         return $this->statusText;
     }
-
     /**
      * @return array
      */
