@@ -550,7 +550,7 @@ if(casper.exists('$selector')){
    casper.click('$selector');
 }
 
-FRAGMENT;
+FRAGMENT; 
 
         $this->script .= $fragment;
 
