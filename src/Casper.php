@@ -543,6 +543,20 @@ FRAGMENT;
         return $this;
     }
 
+    public function clickIfExists(string $selector)
+    {
+        $fragment = <<<FRAGMENT
+if(casper.exists('$selector')){
+   casper.click('$selector');
+}
+
+FRAGMENT;
+
+        $this->script .= $fragment;
+
+        return $this;
+    }
+
     /**
      * @param $function
      * @return $this
