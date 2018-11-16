@@ -535,9 +535,12 @@ FRAGMENT;
     public function clickIfExists(string $selector)
     {
         $fragment = <<<FRAGMENT
-if(casper.exists('$selector')){
-   casper.click('$selector');
-}
+        
+casper.on('load.finished', function() {
+    if(casper.exists('$selector')){
+       casper.click('$selector');
+    }
+});
 
 FRAGMENT;
 
