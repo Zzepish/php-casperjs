@@ -230,6 +230,7 @@ FRAGMENT;
         $this->clear();
 
         $fragment = <<<FRAGMENT
+var load_finished = false;
 var xpath = require('casper').selectXPath;
 var casper = require('casper').create({
     verbose: true,
@@ -537,7 +538,8 @@ FRAGMENT;
         $fragment = <<<FRAGMENT
         
 casper.on('load.finished', function() {
-    if(casper.exists('$selector')){
+    if(casper.exists('$selector') && !load_finished){
+       load_finished = true;
        casper.click('$selector');
     }
 });
